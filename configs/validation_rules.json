@@ -1,0 +1,31 @@
+{
+  "regulations": {
+    "title": {
+      "type": "str",
+      "required": true,
+      "regex": "^.{5,}$"
+    },
+    "created_at": {
+      "type": "date",
+      "required": true,
+      "regex": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "entity": {
+      "type": "str",
+      "required": true
+    },
+    "external_link": {
+      "type": "str",
+      "required": false,
+      "regex": "^(http|https)://"
+    },
+    "gtype": {
+      "type": "str",
+      "required": false
+    },
+    "summary": {
+      "type": "str",
+      "required": false
+    }
+  }
+}
