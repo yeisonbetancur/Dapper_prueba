@@ -2,7 +2,9 @@ import re
 from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
-
+from db import DatabaseManager 
+import pandas as pd
+import json
 
 
 #constantes para el scraping
@@ -251,3 +253,146 @@ def scrape_page(page_num, verbose=False):
     except Exception as e:
         print(f"Error procesando página {page_num}: {e}")
         return []
+    
+def check_for_new_content(num_pages_to_check=3):
+    """
+    Verifica si hay contenido nuevo en las primeras páginas.
+    Retorna True si se detecta nuevo contenido, False en caso contrario.
+    """
+    print(f"Verificando contenido nuevo en las primeras {num_pages_to_check} páginas...")
+    
+    try:
+        # Conectar a la base de datos para obtener la fecha más reciente
+        db_manager = DatabaseManager()
+        if not db_manager.connect():
+            print("Error conectando a la base de datos para verificación")
+            return True  # En caso de error, proceder con el scraping
+        
+        # Obtener la fecha de creación más reciente en la base de datos
+        query = "SELECT MAX(created_at) FROM dapper_regulations_regulations WHERE entity = %s"
+        result = db_manager.execute_query(query, (ENTITY_VALUE,))
+        
+        latest_db_date = None
+        if result and result[0][0]:
+            latest_db_date = result[0][0]
+            
+            # Normalizar fecha de la base de datos
+            if isinstance(latest_db_date, str):
+                try:
+                    latest_db_date = datetime.strptime(latest_db_date, '%Y-%m-%d %H:%M:%S')
+                except:
+                    try:
+                        latest_db_date = datetime.strptime(latest_db_date.split()[0], '%Y-%m-%d')
+                    except:
+                        latest_db_date = None
+            
+            # Normalizar datetime (quitar timezone info)
+            latest_db_date = normalize_datetime(latest_db_date)
+        
+        db_manager.close()
+        
+        print(f"Fecha más reciente en BD: {latest_db_date}")
+        
+        # Verificar las primeras páginas en busca de contenido más reciente
+        for page_num in range(num_pages_to_check):
+            try:
+                page_data = scrape_page(page_num, verbose=False)
+                
+                for record in page_data:
+                    created_at_val = record.get('created_at')
+                    
+                    if created_at_val and is_valid_created_at(created_at_val):
+                        web_date = None
+                        try:
+                            web_date = datetime.strptime(created_at_val, '%Y-%m-%d %H:%M:%S')
+                        except:
+                            try:
+                                web_date = datetime.strptime(created_at_val.split()[0], '%Y-%m-%d')
+                            except:
+                                continue
+                        
+                        # Normalizar fecha web (quitar timezone info)
+                        web_date = normalize_datetime(web_date)
+                        
+                        # Si encontramos contenido más reciente que el de la base de datos
+                        if not latest_db_date or web_date > latest_db_date:
+                            print(f"Nuevo contenido detectado - Fecha web: {web_date}, Fecha BD: {latest_db_date}")
+                            return True
+                
+            except Exception as e:
+                print(f"Error verificando página {page_num}: {e}")
+                continue
+        
+        print("No se detectó contenido nuevo")
+        return False
+        
+    except Exception as e:
+        print(f"Error en verificación de contenido nuevo: {e}")
+        return True  # En caso de error, proceder con el scraping
+    
+def run_extraction(event,context):
+    try:
+        num_pages_to_scrape = event.get('num_pages_to_scrape', 9) if event else 9
+        force_scrape = event.get('force_scrape', False) if event else False
+        
+        print(f"Iniciando scraping de ANI - Páginas a procesar: {num_pages_to_scrape}")
+        
+        # Verificar si hay contenido nuevo (a menos que se fuerce el scraping)
+        if not force_scrape:
+            has_new_content = check_for_new_content(min(3, num_pages_to_scrape))
+            if not has_new_content:
+                return {
+                    'statusCode': 200,
+                    'body': json.dumps({
+                        'message': 'No se detectó contenido nuevo. Scraping omitido.',
+                        'records_scraped': 0,
+                        'records_inserted': 0,
+                        'content_check': 'no_new_content',
+                        'success': True
+                    })
+                }
+        
+        # Procesar las páginas más recientes (0 a num_pages_to_scrape-1)
+        start_page = 0
+        end_page = num_pages_to_scrape - 1
+        
+        print(f"Procesando páginas más recientes desde {start_page} hasta {end_page}")
+
+        all_normas_data = []
+        
+        for page_num in range(start_page, end_page + 1):
+            print(f"Procesando página {page_num}...")
+            page_data = scrape_page(page_num)
+            all_normas_data.extend(page_data)
+            
+            # Indicador de progreso cada 3 páginas
+            if (page_num + 1) % 3 == 0:
+                print(f"Procesadas {page_num + 1}/{num_pages_to_scrape} páginas. Encontrados {len(all_normas_data)} registros válidos.")
+        
+        if not all_normas_data:
+            return {
+                'statusCode': 200,
+                'body': json.dumps({
+                    'message': 'No se encontraron datos válidos durante el scraping',
+                    'records_scraped': 0,
+                    'records_inserted': 0,
+                    'pages_processed': f"{start_page}-{end_page}",
+                    'success': True
+                })
+            }
+        
+        # Crear DataFrame
+        df_normas = pd.DataFrame(all_normas_data)
+        print(f"Total de registros extraídos: {len(df_normas)}")
+        return df_normas
+
+    except Exception as e:
+        error_message = f"Error en la extraccion : {str(e)}"
+        print(error_message)
+        return {
+            'statusCode': 500,
+            'body': json.dumps({
+                'message': error_message,
+                'success': False
+            })
+        }
