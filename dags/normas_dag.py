@@ -4,9 +4,9 @@ from airflow.utils.dates import days_ago
 from airflow.decorators import task, dag
 from datetime import datetime, timedelta
 import pandas as pd
-from modules.extraccion import run_extraction, ENTITY_VALUE
-from modules.escritura import run_write
-from modules.validacion import run_validation
+from src.extraccion import run_extraction, ENTITY_VALUE
+from src.escritura import run_write
+from src.validacion import run_validation
 
 #configuracion por defecto del dag
 default_args = {
