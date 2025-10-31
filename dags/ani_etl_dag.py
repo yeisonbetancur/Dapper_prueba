@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '/opt/airflow')
+
 from airflow import DAG
 from airflow.models.param import Param
 from airflow.utils.dates import days_ago
@@ -16,7 +19,7 @@ default_args = {
 }
 
 @dag(
-    'ani_etl_pipeline',
+    'ani_etl_dag',
     default_args=default_args,
     description='Pipeline ETL con 3 pasos para ani: Extracción -> Transformación -> Carga',
     start_date=days_ago(1),
@@ -46,10 +49,16 @@ def ani_pipeline():
     def validar_datos(records):
         print(f"\nVALIDACIÓN ")
         df = pd.DataFrame(records)
-        df_valid = run_validation(df,ENTITY_VALUE,)
-        
-        return df_valid.to_dict(orient='records')
+        df_valid, reporte = run_validation(df, ENTITY_VALUE)
     
+        # Mostrar el reporte de validación
+        print(f"✓ Filas válidas: {reporte['total_valid_rows']}")
+        print(f"✗ Filas descartadas: {reporte['total_dropped_rows']}")
+        if reporte['invalid_by_field']:
+            print(f"Campos inválidos: {reporte['invalid_by_field']}")
+        return df_valid.to_dict(orient="records")
+
+
     @task 
     def escribir_datos(records):
         print("\n ESCRITURA ")

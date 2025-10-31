@@ -17,6 +17,7 @@ x-airflow-base: &airflow-base
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
     - ./src:/opt/airflow/src
+    - ./scripts:/opt/airflow/scripts
     - ./configs:/opt/airflow/configs
 
 services:

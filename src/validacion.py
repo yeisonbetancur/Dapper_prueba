@@ -196,7 +196,7 @@ class DataValidator:
         if invalid_by_field:
             print(f"   • Valores inválidos por campo: {invalid_by_field}")
         
-        return clean_df
+        return clean_df, validation_report
     
     def get_entity_rules(self, entity: str) -> Optional[Dict]:
         """Obtiene las reglas para una entidad específica."""

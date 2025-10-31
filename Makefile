@@ -1,4 +1,4 @@
-.PHONY: reset-airflow init-airflow up-airflow down-airflow start
+.PHONY: reset-airflow init-airflow up-airflow down-airflow start ver-db
 
 down-airflow:
 	docker-compose down --volumes
@@ -19,5 +19,9 @@ init-airflow:
 
 up-airflow:
 	docker-compose up -d
+
+
+ver-db:
+	docker-compose exec webserver python /opt/airflow/scripts/ver_db.py
 
 start: reset-airflow init-airflow up-airflow
