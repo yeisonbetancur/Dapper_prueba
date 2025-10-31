@@ -12,9 +12,10 @@ function Show-Help {
     Write-Host "  down-airflow   - Detiene y elimina contenedores con volumenes"
     Write-Host "  reset-airflow  - Resetea completamente Airflow (down + limpieza)"
     Write-Host "  init-airflow   - Inicializa la base de datos y crea usuario admin"
+    Write-Host "  create-schema  - Crea las tablas en la base de datos"
     Write-Host "  up-airflow     - Levanta los servicios de Airflow"
     Write-Host "  ver-db         - Muestra el contenido de la base de datos"
-    Write-Host "  start          - Secuencia completa: reset + init + up"
+    Write-Host "  start          - Secuencia completa: reset + init + schema + up"
     Write-Host ""
     Write-Host "Ejemplos:" -ForegroundColor Yellow
     Write-Host "  .\airflow.ps1 start"
@@ -95,6 +96,29 @@ switch ($Command) {
             exit 1
         }
     }
+    "create-schema" {
+        Write-Host "[*] Creando tablas en la base de datos..." -ForegroundColor Yellow
+        
+        # Verificar que existe el archivo schema.sql
+        if (-not (Test-Path "configs/schema.sql")) {
+            Write-Host "[ERROR] No se encontro el archivo configs/schema.sql" -ForegroundColor Red
+            exit 1
+        }
+        
+        # Esperar a que postgres esté listo
+        Write-Host "[*] Esperando a que PostgreSQL este listo..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+        
+        # Ejecutar el script SQL
+        Get-Content configs/schema.sql | docker-compose exec -T postgres psql -U airflow -d airflow
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[OK] Tablas creadas correctamente" -ForegroundColor Green
+        } else {
+            Write-Host "[ERROR] Error al crear las tablas" -ForegroundColor Red
+            exit 1
+        }
+    }
     "up-airflow" {
         Write-Host "[*] Levantando servicios de Airflow..." -ForegroundColor Yellow
         docker-compose up -d
@@ -161,6 +185,26 @@ switch ($Command) {
             Write-Host "[ERROR] Error al crear usuario admin" -ForegroundColor Red
             exit 1
         }
+        Write-Host ""
+        
+        # Create Schema
+        Write-Host "[*] Creando tablas en la base de datos..." -ForegroundColor Yellow
+        
+        if (-not (Test-Path "configs/schema.sql")) {
+            Write-Host "[ERROR] No se encontro el archivo configs/schema.sql" -ForegroundColor Red
+            exit 1
+        }
+        
+        Write-Host "[*] Esperando a que PostgreSQL este listo..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+        
+        Get-Content configs/schema.sql | docker-compose exec -T postgres psql -U airflow -d airflow
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] Error al crear las tablas" -ForegroundColor Red
+            exit 1
+        }
+        Write-Host "[OK] Tablas creadas correctamente" -ForegroundColor Green
         Write-Host ""
         
         # Up
