@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 import requests
 from db import DatabaseManager 
 import pandas as pd
-import json
 
 
 #constantes para el scraping

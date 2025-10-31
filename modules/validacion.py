@@ -196,7 +196,7 @@ class DataValidator:
         if invalid_by_field:
             print(f"   • Valores inválidos por campo: {invalid_by_field}")
         
-        return clean_df, validation_report
+        return clean_df
     
     def get_entity_rules(self, entity: str) -> Optional[Dict]:
         """Obtiene las reglas para una entidad específica."""
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     })
     
     # Validar
-    validator = DataValidator('rules.json')
+    validator = DataValidator('configs/validation_rules.json')
     clean_df, report = validator.validate(sample_df, 'users')
     
     print("\nReporte de Validación:")
@@ -237,8 +237,8 @@ if __name__ == "__main__":
 def run_validation(
     df: pd.DataFrame, 
     entity: str, 
-    rules_path: str = 'config/validation_rules.json'
-) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    rules_path: str = 'configs/validation_rules.json'
+) -> pd.DataFrame:
     """
     Función de entrada para validación en DAG.
     
