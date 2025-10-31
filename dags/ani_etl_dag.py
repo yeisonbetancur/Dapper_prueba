@@ -56,7 +56,7 @@ def ani_pipeline():
         print(f"✗ Filas descartadas: {reporte['total_dropped_rows']}")
         if reporte['invalid_by_field']:
             print(f"Campos inválidos: {reporte['invalid_by_field']}")
-        return df_valid.to_dict(orient="records")
+        return df_valid
 
 
     @task 

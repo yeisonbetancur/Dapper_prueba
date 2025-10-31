@@ -251,4 +251,13 @@ def run_validation(
         Tupla de (dataframe_validado, reporte_validacion)
     """
     validator = DataValidator(rules_path)
-    return validator.validate(df, entity)
+    clean_df, report = validator.validate(df, entity)
+
+    # Convertir las fechas a string antes de devolver
+    clean_records = clean_df.to_dict(orient="records")
+    for rec in clean_records:
+        for key, val in rec.items():
+            if isinstance(val, pd.Timestamp):
+                rec[key] = val.strftime("%Y-%m-%d")
+
+    return clean_records, report

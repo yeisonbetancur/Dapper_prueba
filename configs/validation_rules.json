@@ -1,5 +1,5 @@
 {
-  "regulations": {
+  "Agencia Nacional de Infraestructura": {
     "title": {
       "type": "str",
       "required": true,
