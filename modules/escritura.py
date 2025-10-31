@@ -1,4 +1,7 @@
 import pandas as pd
+from db import DatabaseManager
+from typing import Tuple 
+
 
 def insert_regulations_component(db_manager, new_ids):
     """
@@ -198,3 +201,12 @@ def insert_new_records(db_manager, df, entity):
         print(traceback.format_exc())
         return 0, error_msg
 
+def run_write(df: pd.DataFrame, entity: str) -> Tuple[int,str]:
+    db_manager = DatabaseManager()
+    if not db_manager.connect():
+        return 0, "Error Conectado a la db"
+    try: 
+        total_rows_processed, message = insert_new_records(db_manager,df, entity)
+        return total_rows_processed, message
+    finally:
+        db_manager.close()
