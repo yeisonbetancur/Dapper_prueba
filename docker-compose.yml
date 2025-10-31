@@ -10,13 +10,13 @@ x-airflow-base: &airflow-base
     AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
-    PYTHONPATH: "/opt/airflow/module:${PYTHONPATH}"
+    PYTHONPATH: "/opt/airflow/src:${PYTHONPATH}"
   volumes:
     - ./config/airflow.cfg:/opt/airflow/airflow.cfg
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
-    - ./src:/opt/airflow/module
+    - ./src:/opt/airflow/src
     - ./configs:/opt/airflow/configs
 
 services:
