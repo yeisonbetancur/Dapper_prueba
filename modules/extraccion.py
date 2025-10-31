@@ -330,31 +330,22 @@ def check_for_new_content(num_pages_to_check=3):
         print(f"Error en verificación de contenido nuevo: {e}")
         return True  # En caso de error, proceder con el scraping
     
-def run_extraction(event,context):
+def run_extraction(num_pages: int = 9, force_scrape: bool = False) -> pd.DataFrame:
     try:
-        num_pages_to_scrape = event.get('num_pages_to_scrape', 9) if event else 9
-        force_scrape = event.get('force_scrape', False) if event else False
         
-        print(f"Iniciando scraping de ANI - Páginas a procesar: {num_pages_to_scrape}")
+        print(f"Iniciando scraping de ANI - Páginas a procesar: {num_pages}")
         
         # Verificar si hay contenido nuevo (a menos que se fuerce el scraping)
         if not force_scrape:
-            has_new_content = check_for_new_content(min(3, num_pages_to_scrape))
+            has_new_content = check_for_new_content(min(3, num_pages))
             if not has_new_content:
-                return {
-                    'statusCode': 200,
-                    'body': json.dumps({
-                        'message': 'No se detectó contenido nuevo. Scraping omitido.',
-                        'records_scraped': 0,
-                        'records_inserted': 0,
-                        'content_check': 'no_new_content',
-                        'success': True
-                    })
-                }
+                    print("No se detectó contenido nuevo. Scrapping omitido.")
+                    return pd.DataFrame() 
+                
         
         # Procesar las páginas más recientes (0 a num_pages_to_scrape-1)
         start_page = 0
-        end_page = num_pages_to_scrape - 1
+        end_page = num_pages - 1
         
         print(f"Procesando páginas más recientes desde {start_page} hasta {end_page}")
 
@@ -367,19 +358,11 @@ def run_extraction(event,context):
             
             # Indicador de progreso cada 3 páginas
             if (page_num + 1) % 3 == 0:
-                print(f"Procesadas {page_num + 1}/{num_pages_to_scrape} páginas. Encontrados {len(all_normas_data)} registros válidos.")
+                print(f"Procesadas {page_num + 1}/{num_pages} páginas. Encontrados {len(all_normas_data)} registros válidos.")
         
         if not all_normas_data:
-            return {
-                'statusCode': 200,
-                'body': json.dumps({
-                    'message': 'No se encontraron datos válidos durante el scraping',
-                    'records_scraped': 0,
-                    'records_inserted': 0,
-                    'pages_processed': f"{start_page}-{end_page}",
-                    'success': True
-                })
-            }
+                print("No se encontraron datos validos durante el scrapping, cancelando scrapping")
+                return pd.DataFrame()
         
         # Crear DataFrame
         df_normas = pd.DataFrame(all_normas_data)
@@ -389,10 +372,4 @@ def run_extraction(event,context):
     except Exception as e:
         error_message = f"Error en la extraccion : {str(e)}"
         print(error_message)
-        return {
-            'statusCode': 500,
-            'body': json.dumps({
-                'message': error_message,
-                'success': False
-            })
-        }
+        raise
