@@ -1,5 +1,9 @@
 import psycopg2
 import pandas as pd
+import os
+from urllib.parse import urlparse
+from typing import Dict
+
 
 class DatabaseManager:
     def __init__(self):
@@ -8,20 +12,47 @@ class DatabaseManager:
 
     def connect(self):
         try:
-            secrets = get_secret()
+            params = self._get_db_env()
             
             self.connection = psycopg2.connect(
-                dbname=secrets['DB_NAME'],
-                user=secrets['DB_USERNAME'],
-                password=secrets['DB_PASSWORD'],
-                host=secrets['DB_HOST'],
-                port=secrets['DB_PORT']
+                dbname=params['dbname'],
+                user=params['user'],
+                password=params['password'],
+                host=params['host'],
+                port=params['port'],
             )
             self.cursor = self.connection.cursor()
             return True
         except Exception as e:
             print(f"Database connection error: {e}")
             return False
+        
+    def _get_db_env(self) -> Dict[str, str]:
+        uri = os.environ.get('AIRFLOW__CORE__SQL_ALCHEMY_CONN')
+        if uri:
+            # Forma Esperada: postgresql+psycopg2://user:pass@host:port/dbname
+            parsed = urlparse(uri)
+            dbname = parsed.path.lstrip('/') or 'airflow'
+            user = parsed.username or 'airflow'
+            password = parsed.password or 'airflow'
+            host = parsed.hostname or 'postgres'
+            port = parsed.port or 5432
+            return {
+                'dbname': dbname,
+                'user': user,
+                'password': password,
+                'host': host,
+                'port': int(port),
+            }
+
+        # Fallback a variables de entorno
+        return {
+            'dbname': os.environ.get('DB_NAME', 'airflow'),
+            'user': os.environ.get('DB_USER', 'airflow'),
+            'password': os.environ.get('DB_PASSWORD', 'airflow'),
+            'host': os.environ.get('DB_HOST', 'postgres'),
+            'port': int(os.environ.get('DB_PORT', '5432')),
+        }
 
     def close(self):
         if self.cursor:
